@@ -7617,7 +7617,8 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     </svg>
                 </a>
                 <div class="social-link social-version" id="versionBadge" title="当前版本" role="button" tabindex="0"
-                    onclick="openVersionInfoModal()" onkeydown="onVersionBadgeKeydown(event)" hidden style="display: none;">
+                    onclick="openVersionInfoModal()" onkeydown="onVersionBadgeKeydown(event)" hidden
+                    style="display: none;">
                     <span id="versionValue"></span>
                 </div>
                 <!-- 返回顶部按钮 -->
@@ -7646,12 +7647,17 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             <button type="button" class="modal-close" onclick="closeVersionInfoModal()">×</button>
             <h2 class="version-info-title">🚀 关于 edgetunnel</h2>
             <div class="version-info-summary state-outdated" id="versionInfoSummary">
-                <p id="latestVersionInfoText" class="version-info-line"><strong>最新版本:</strong> <span id="latestVersionInfoValue">v0</span></p>
-                <p id="currentVersionInfoText" class="version-info-line"><strong>当前版本:</strong> <span id="currentVersionInfoValue">v0</span> <span id="currentVersionStateText" class="version-state-tip is-outdated">需要更新</span></p>
+                <p id="latestVersionInfoText" class="version-info-line"><strong>最新版本:</strong> <span
+                        id="latestVersionInfoValue">v0</span></p>
+                <p id="currentVersionInfoText" class="version-info-line"><strong>当前版本:</strong> <span
+                        id="currentVersionInfoValue">v0</span> <span id="currentVersionStateText"
+                        class="version-state-tip is-outdated">需要更新</span></p>
             </div>
             <div class="version-info-actions">
-                <button type="button" class="btn btn-version-copy" onclick="copyLatestWorkerSourceToClipboard()">📋 复制最新Worker.js源码 到剪贴板</button>
-                <button type="button" class="btn btn-version-download" onclick="openLatestPagesZipDownload()">📦 下载最新Pages.zip源码 上传部署</button>
+                <button type="button" class="btn btn-version-copy" onclick="copyLatestWorkerSourceToClipboard()">📋
+                    复制最新Worker.js源码 到剪贴板</button>
+                <button type="button" class="btn btn-version-download" onclick="openLatestPagesZipDownload()">📦
+                    下载最新Pages.zip源码 上传部署</button>
                 <button type="button" class="btn btn-secondary" onclick="closeVersionInfoModal()">取消</button>
             </div>
         </div>
@@ -16227,18 +16233,51 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 throw new Error('missing ip');
             }
 
-            const infoResponse = await fetch(
-                `https://api.cmliussss.net/api/ipinfo?ip=${encodeURIComponent(requestIp)}&_t=${Date.now()}`
-            );
-            if (!infoResponse.ok) {
-                throw new Error(`ipinfo HTTP ${infoResponse.status}`);
-            }
+            const apis = [
+                {
+                    name: 'cm-eo',
+                    url: `https://api.cmliussss.net/api/ipinfo?ip=${encodeURIComponent(requestIp)}`
+                }, 
+                {
+                    name: 'cm-cf',
+                    url: `https://cf.090227.xyz/api/ipsb?ip=${encodeURIComponent(requestIp)}`
+                }
+            ];
 
-            return infoResponse.json();
+            const requestTasks = apis.map(async api => {
+                const response = await fetch(api.url, { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`${api.name} HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                if (!data || typeof data !== 'object') {
+                    throw new Error(`${api.name} invalid payload`);
+                }
+                return data;
+            });
+
+            try {
+                return await Promise.any(requestTasks);
+            } catch (error) {
+                throw new Error(`ipinfo all failed for ${requestIp}`);
+            }
         }
 
         function formatIpInfoLocation(info) {
-            return `${info.country_code || '未知'} ${info.asn || ''} ${info.as_name || ''}`.trim() || '未知';
+            const countryCode = String(info?.country_code || '未知').trim() || '未知';
+            const rawAsn = info?.asn;
+            const asnText = rawAsn === undefined || rawAsn === null
+                ? ''
+                : (/^\d+$/.test(String(rawAsn).trim()) ? `AS${String(rawAsn).trim()}` : String(rawAsn).trim());
+            const asnName = String(
+                info?.as_name ||
+                info?.asn_organization ||
+                info?.organization ||
+                info?.isp ||
+                ''
+            ).trim();
+
+            return `${countryCode} ${asnText} ${asnName}`.trim() || '未知';
         }
 
         // 获取国内测试数据 (多源并发：HEAD + JSONP，提取IP后查询ipinfo)
