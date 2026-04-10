@@ -1958,6 +1958,11 @@
             border-color: #d1d5db;
         }
 
+        .checkbox-group input[type="checkbox"]:disabled+.checkbox-label {
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
         .checkbox-label {
             font-size: 14px;
             color: #374151;
@@ -2286,6 +2291,10 @@
         html.dark-mode .form-group select:disabled {
             background-color: var(--input-bg) !important;
             color: var(--text-secondary) !important
+        }
+
+        html.dark-mode .checkbox-group input[type="checkbox"]:disabled+.checkbox-label {
+            color: var(--text-secondary) !important;
         }
 
         html.dark-mode .form-group input:not([type="checkbox"])[readonly] {
@@ -10400,6 +10409,8 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
         function handleTransportChange() {
             updateGrpcModeVisibility();
             updateTransportGrpcTooltipVisibility(true);
+            const protocolSelect = document.getElementById('protocol');
+            updateProtocolOptionAvailability(protocolSelect ? protocolSelect.value : '');
             markModified('config');
         }
 
@@ -10530,6 +10541,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
         function updateProtocolOptionAvailability(protocol) {
             const ssTLSSelect = document.getElementById('ssTLS');
+            const transportSelect = document.getElementById('transport');
             const enable0RTT = document.getElementById('enable0RTT');
             const skipVerify = document.getElementById('skipVerify');
             const tlsFragmentShadowrocket = document.getElementById('tlsFragmentShadowrocket');
@@ -10537,10 +10549,12 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
             const isShadowsocks = protocol === 'ss';
             const isShadowsocksNoTLS = isShadowsocks && ssTLSSelect && ssTLSSelect.value === 'false';
+            const isGrpcTransport = !!(transportSelect && transportSelect.value === 'grpc');
+            const shouldDisable0RTT = isShadowsocks || isGrpcTransport;
 
             if (enable0RTT) {
-                enable0RTT.disabled = isShadowsocks;
-                if (isShadowsocks && enable0RTT.checked) {
+                enable0RTT.disabled = shouldDisable0RTT;
+                if (shouldDisable0RTT && enable0RTT.checked) {
                     enable0RTT.checked = false;
                 }
             }
